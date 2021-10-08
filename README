@@ -23,7 +23,7 @@ cam_transmit.FCStd - remote enclosure
 intervalometer.FCStd - intervalometer enclosure
 interval.ods - printable table for 12 bit DIP switch
 cam_remote.pcb - up to date PC board for remote transmitter & receiver
-intervalometer3.pdb - up to date PC board for intervalometer
+intervalometer3.pdb - PC board for 12 DIP intervalometer
 
 
 mrf49xa - obsolete wireless intervalometer
