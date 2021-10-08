@@ -1,0 +1,41 @@
+What you'll find here:
+
+Source files for various camera shutters & intervalometers.
+
+The source code for the intervalometer with 12 DIP switches is sadly
+gone.  There is still source code for an earlier intervalometer with 8
+DIP switches.  8 DIP switches might actually be enough.
+
+It's simple enough to write a scratch intervalometer in C.  The mane
+requirement is to use a 32768 clock to conserve power.  It might be
+better off using 8 DIP switches instead of 12.
+
+It was written for mirrored cameras which required a mirror lockup
+followed by a shutter pulse.  Modern cameras have no mirror so they can
+be driven in continuous mode.  The storage time serves as a delay
+between exposures.  Setting 0 for the mirror lockup disabled it.
+
+
+remote_rx.X - up to date radio firmware for cam remote using XBee
+remote_tx.X - up to date radio firmware for cam remote using XBee
+cam_receive.FCStd - remote enclosure.  Must print bulge from cam_transmit
+cam_transmit.FCStd - remote enclosure
+intervalometer.FCStd - intervalometer enclosure
+interval.ods - printable table for 12 bit DIP switch
+cam_remote.pcb - up to date PC board for remote transmitter & receiver
+intervalometer3.pdb - up to date PC board for intervalometer
+
+
+mrf49xa - obsolete wireless intervalometer
+obsolete - original 8 DIP switch intervalometer
+
+remote_rx.s - obsolete radio firmware for cam remote using XBee
+remote_tx.s - obsolete radio firmware for cam remote using XBee
+
+
+
+gear360.c gear360.h gear360shutter.pcb - intervalometer for gear 360
+
+
+
+

@@ -1,0 +1,6 @@
+
+
+
+Power switch is defective.  Replace or just always use mirror lockup
+mode and set mirror lockup to 0 duration when not needed.  Need test for
+0 duration and skips the shutter pulse.

@@ -1,0 +1,24 @@
+#include "util.inc"
+
+
+
+
+	ORG PROGRAM_START
+
+start:
+	clrwdt
+	SET_REGISTER PORTB, B'00000010'
+	setf ADCON1
+	setf TRISA
+	SET_REGISTER TRISB, B'11111101'
+	BOOTLOADER_WRITE_REG PORTA
+;	BOOTLOADER_WRITE_REG PORTB
+	goto start
+
+
+
+END
+
+
+
+
