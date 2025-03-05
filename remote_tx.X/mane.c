@@ -1,6 +1,6 @@
 /*
  * REMOTE CONTROL SHUTTER
- * Copyright (C) 2021 Adam Williams <broadcast at earthling dot net>
+ * Copyright (C) 2021-2025 Adam Williams <broadcast at earthling dot net>
  * 
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,10 +23,12 @@
 
 
 // remote control transmitter using XBee
-// sends the value of PORTA to the serial port until it gets an ACK
+// sends the value of PORTA 0:1 to the serial port until it gets an ACK
 // with a matching state
 
 
+// enable for analog foot pedal
+#define FOOT
 
 
 
@@ -92,6 +94,9 @@
 #include <pic18lf1320.h>
 #include <stdint.h>
 
+// invert the input for digital foot pedals
+//#define INVERT
+
 #define CLOCKSPEED 8000000
 #define XBEE_BAUD 115200
 #define DELAY -40000
@@ -113,10 +118,22 @@ typedef union
 
 flags_t flags;
 uint8_t serial_in = 0x00;
+// last value of the port pins
 uint8_t value = 0xff;
 uint8_t prev_value = 0xff;
 // last code sent
 uint8_t code = 0x00;
+
+#ifdef FOOT
+uint16_t sensor_accum = 0;
+uint8_t sensor_count = 0;
+#endif
+
+#define UART_BUFSIZE 64
+uint8_t uart_buffer[UART_BUFSIZE];
+uint8_t uart_size = 0;
+uint8_t uart_position1 = 0;
+uint8_t uart_position2 = 0;
 
 void idle();
 void read_sync();
@@ -124,10 +141,57 @@ void read_sync();
 void (*tx_state)() = idle;
 void (*rx_state)() = read_sync;
 
+
+void print_byte(uint8_t c)
+{
+	if(uart_size < UART_BUFSIZE)
+	{
+		uart_buffer[uart_position1++] = c;
+		uart_size++;
+		if(uart_position1 >= UART_BUFSIZE)
+		{
+			uart_position1 = 0;
+		}
+	}
+}
+
+void print_number_nospace(uint16_t number)
+{
+	if(number >= 10000) print_byte('0' + (number / 10000));
+	if(number >= 1000) print_byte('0' + ((number / 1000) % 10));
+	if(number >= 100) print_byte('0' + ((number / 100) % 10));
+	if(number >= 10) print_byte('0' + ((number / 10) % 10));
+	print_byte('0' + (number % 10));
+}
+
+void print_number(uint16_t number)
+{
+    print_number_nospace(number);
+   	print_byte(' ');
+}
+
+void print_text(const uint8_t *s)
+{
+	while(*s != 0)
+	{
+		print_byte(*s);
+		s++;
+	}
+}
+
+
+
+
 void send_data()
 {
-    code = PORTA;
+    code = value;
+
     code &= 0x3;
+// digital pedal
+//#ifdef INVERT
+//    code ^= 0x3;
+//#endif
+// copy to bits 2:5
     code |= code << 2;
     code |= code << 4;
     code ^= SALT;
@@ -144,6 +208,22 @@ void send_sync()
 
 void idle()
 {
+}
+
+void send_debug()
+{
+    if(uart_size > 0)
+    {
+        PIR1bits.TXIF = 0;
+        TXREG = uart_buffer[uart_position2++];
+		uart_size--;
+		if(uart_position2 >= UART_BUFSIZE)
+		{
+			uart_position2 = 0;
+		}
+    }
+    else
+        tx_state = send_sync;
 }
 
 void read_ack()
@@ -164,11 +244,44 @@ void read_sync()
     }
 }
 
+void handle_input()
+{
+// compare the latest port value to the last one
+    if(value != prev_value ||
+        !flags.got_ack)
+    {
+        flags.got_ack = 0;
+        prev_value = value;
+
+// send a new beacon
+        tx_state = send_sync;
+        LED_LAT = !LED_LAT;
+    }
+    else
+    {
+// turn LED back on
+        if(!LED_LAT)
+        {
+            LED_LAT = 1;
+        }
+    }
+}
+
 void main()
 {
     OSCCON = 0b01110000;
+
+#ifdef FOOT
+// analog input
+    ADCON0 = 0b00000001;
+    ADCON1 = 0xfe;
+    ADCON2 = 0b10111110;
+    GO = 1;
+#else
 // digital mode
     ADCON1 = 0xff;
+#endif
+
 // input mode
     TRISAbits.TRISA0 = 1;
     TRISAbits.TRISA1 = 1;
@@ -205,6 +318,45 @@ void main()
         {
             tx_state();
         }
+
+#ifdef FOOT
+        if(ADIF)
+        {
+            ADIF = 0;
+            sensor_accum += ADRES;
+            sensor_count++;
+            if(sensor_count >= 64)
+            {
+                sensor_accum /= 256;
+
+                prev_value = value;
+// measured 115-5
+// shutter + focus
+                if(sensor_accum < 64)
+                    value = ~0x3;
+                else
+// focus
+                if(sensor_accum < 110)
+                    value = ~0x2;
+                else
+                    value = 0xff;
+
+                handle_input();
+
+// print_number_nospace(sensor_accum);
+// print_byte('\n');
+// tx_state = send_debug;
+
+                sensor_accum = 0;
+                sensor_count = 0;
+            }
+            else
+            {
+                GO = 1;
+            }
+        }
+#endif
+
     }
 }
 
@@ -227,27 +379,18 @@ void __interrupt(high_priority) isr()
             INTCONbits.TMR0IF = 0;
             TMR0 = DELAY;
             flags.interrupt_complete = 0;
+
+#ifdef FOOT
+// start a new conversion in the mane loop
+            GO = 1;
+#else
             prev_value = value;
             value = PORTA & 0x3;
-// compare the latest port value to the last one
-            if(value != prev_value ||
-                !flags.got_ack)
-            {
-                flags.got_ack = 0;
-                prev_value = value;
 
-// send a new beacon
-                tx_state = send_sync;
-                LED_LAT = !LED_LAT;
-            }
-            else
-            {
-// turn LED back on
-                if(!LED_LAT)
-                {
-                    LED_LAT = 1;
-                }
-            }
+            handle_input();
+#endif
+
+
         }
         
         

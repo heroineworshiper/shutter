@@ -16,6 +16,24 @@ be driven in continuous mode.  The storage time serves as a delay
 between exposures.  Setting 0 for the mirror lockup disabled it.
 
 
+Configuring the XBee:
+// enter command mode
+// +++
+// set the frequency
+// atch0c
+// baud rate  07=115200
+// atbd07
+// flash configuration
+// atwr
+// exit command mode
+// atcn
+
+
+For foot pedals, it's unfortunate that the unplugged state is the down
+state for the Yamaha pedals.  The user has to remember to connect a
+jumper when no focus pedal is connected & disconnect the jumper when a
+focus pedal is connected. 
+
 remote_rx.X - up to date radio firmware for cam remote using XBee
 remote_tx.X - up to date radio firmware for cam remote using XBee
 cam_receive.FCStd - remote enclosure.  Must print bulge from cam_transmit
@@ -25,6 +43,7 @@ interval.ods - printable table for 12 bit DIP switch
 cam_remote.pcb - up to date PC board for remote transmitter & receiver
 intervalometer3.pdb - PC board for 12 DIP intervalometer
 
+pedal.FCStd - platform for a hall effect sensor in a foot pedal
 
 mrf49xa - obsolete wireless intervalometer
 obsolete - original 8 DIP switch intervalometer
